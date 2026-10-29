@@ -161,6 +161,8 @@ const Products = () => {
                   price={item.price}
                   originalPrice={item.originalPrice}
                   image={item.primaryImage}
+                  affiliateUrl={item.affiliateUrl || item.amazonUrl || item.flipkartUrl}
+                  platform={item.platform}
                 />
                 {/* Trash icon ONLY visible to Admin */}
                 {isAdmin && (

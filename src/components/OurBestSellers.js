@@ -1,61 +1,48 @@
 import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { cartActions } from '../redux-state/CartState';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@chakra-ui/react';
-import { FaStar, FaHeart, FaRegHeart, FaBolt, FaShoppingCart } from 'react-icons/fa';
+import { FaStar, FaHeart, FaRegHeart, FaExternalLinkAlt, FaBolt, FaAmazon, FaShoppingBag } from 'react-icons/fa';
+import { getProductById } from '../productsStore/ProductService';
 
 const OurBestSellers = (props) => {
   const { title, price, originalPrice: customMRP, id, image } = props;
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const dispatch = useDispatch();
   const navigate = useNavigate();
   const toast = useToast();
 
-  // Use exact price entered by user
+  // Retrieve product from props or service
+  const productData = getProductById(id);
+  const targetLink =
+    props.affiliateUrl ||
+    props.amazonUrl ||
+    props.flipkartUrl ||
+    productData?.affiliateUrl ||
+    productData?.amazonUrl ||
+    productData?.flipkartUrl;
+
+  const platform =
+    props.platform ||
+    productData?.platform ||
+    (targetLink?.toLowerCase().includes('flipkart') ? 'flipkart' : 'amazon');
+
+  // Exact price entered by user
   const formattedPrice = Number(price) || 0;
   const originalPrice = Number(customMRP) || (formattedPrice > 0 ? Math.round(formattedPrice * 1.35) : 0);
   const discountPercent = originalPrice > formattedPrice
     ? Math.round(((originalPrice - formattedPrice) / originalPrice) * 100)
     : 0;
 
-  const addItemToCartHandler = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    dispatch(
-      cartActions.addItemToCart({
-        id,
-        price: formattedPrice,
-        title,
-        image,
-      })
-    );
-
-    toast({
-      title: 'Added to Cart',
-      description: `${title} is now in your cart.`,
-      status: 'success',
-      duration: 1800,
-      isClosable: true,
-      position: 'bottom-right'
-    });
-  };
-
+  // DIRECT REDIRECT to Amazon or Flipkart affiliate link
   const handleBuyNow = (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    dispatch(
-      cartActions.addItemToCart({
-        id,
-        price: formattedPrice,
-        title,
-        image,
-      })
-    );
-
-    navigate('/cart');
+    if (targetLink && targetLink.trim()) {
+      window.open(targetLink, '_blank', 'noopener,noreferrer,sponsored');
+    } else {
+      // Fallback: navigate to the product deal landing page
+      navigate(`/deal/${id}`);
+    }
   };
 
   const toggleWishlist = (e) => {
@@ -87,8 +74,8 @@ const OurBestSellers = (props) => {
         )}
       </button>
 
-      {/* Product Image & Link */}
-      <Link to={`/${id}`} className="block">
+      {/* Product Image & Link to Landing Page */}
+      <Link to={`/deal/${id}`} className="block">
         <div className="w-full h-48 flex items-center justify-center overflow-hidden p-2">
           <img
             src={image}
@@ -103,14 +90,18 @@ const OurBestSellers = (props) => {
             {title}
           </h3>
 
-          {/* Rating & Assured Badge */}
+          {/* Rating & Platform Badge */}
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <span className="bg-[#388e3c] text-white text-[11px] font-bold px-1.5 py-0.5 rounded-sm flex items-center gap-0.5">
-              4.3 <FaStar className="text-[9px]" />
+              4.5 <FaStar className="text-[9px]" />
             </span>
-            <span className="text-xs text-gray-500 font-medium">(1,420)</span>
-            <span className="text-[10px] font-extrabold italic text-[#2874f0] bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">
-              ✦ Assured
+            <span className="text-xs text-gray-500 font-medium">(1,250)</span>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+              platform === 'amazon'
+                ? 'bg-amber-50 text-amber-900 border border-amber-200'
+                : 'bg-blue-50 text-[#2874f0] border border-blue-200'
+            }`}>
+              {platform === 'amazon' ? 'Amazon Verified' : 'Flipkart Assured'}
             </span>
           </div>
 
@@ -128,28 +119,46 @@ const OurBestSellers = (props) => {
           </div>
 
           <p className="text-[11px] text-gray-500 mt-1">
-            Free delivery by <span className="font-semibold text-gray-700">Tomorrow</span>
+            Free Express Delivery on <span className="font-semibold text-gray-700">{platform === 'amazon' ? 'Amazon' : 'Flipkart'}</span>
           </p>
         </div>
       </Link>
 
-      {/* Flipkart Action Buttons */}
+      {/* Action Buttons: View Deal & Direct Buy Now Redirect */}
       <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-gray-100">
-        <button
-          onClick={addItemToCartHandler}
-          className="bg-[#ff9f00] hover:bg-[#f39700] text-white text-xs font-bold py-2 px-2 rounded-sm shadow-sm flex items-center justify-center gap-1 transition-colors uppercase tracking-wider"
+        <Link
+          to={`/deal/${id}`}
+          className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold py-2.5 px-2 rounded-sm shadow-sm flex items-center justify-center gap-1 transition-colors uppercase tracking-wider text-center"
         >
-          <FaShoppingCart className="text-xs" />
-          Add to Cart
-        </button>
+          <FaBolt className="text-xs text-amber-500" />
+          View Deal
+        </Link>
 
-        <button
-          onClick={handleBuyNow}
-          className="bg-[#fb641b] hover:bg-[#e8560f] text-white text-xs font-bold py-2 px-2 rounded-sm shadow-sm flex items-center justify-center gap-1 transition-colors uppercase tracking-wider"
-        >
-          <FaBolt className="text-xs" />
-          Buy Now
-        </button>
+        {targetLink ? (
+          <a
+            href={targetLink}
+            target="_blank"
+            rel="sponsored noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className={`text-white text-xs font-bold py-2.5 px-2 rounded-sm shadow-sm flex items-center justify-center gap-1.5 transition-colors uppercase tracking-wider text-center ${
+              platform === 'amazon'
+                ? 'bg-[#FF9900] hover:bg-[#F08800] !text-gray-900'
+                : 'bg-[#fb641b] hover:bg-[#e8560f]'
+            }`}
+          >
+            {platform === 'amazon' ? <FaAmazon className="text-xs" /> : <FaShoppingBag className="text-xs" />}
+            <span>Buy Now</span>
+            <FaExternalLinkAlt className="text-[9px]" />
+          </a>
+        ) : (
+          <button
+            onClick={handleBuyNow}
+            className="bg-[#fb641b] hover:bg-[#e8560f] text-white text-xs font-bold py-2.5 px-2 rounded-sm shadow-sm flex items-center justify-center gap-1 transition-colors uppercase tracking-wider"
+          >
+            <FaBolt className="text-xs" />
+            Buy Now
+          </button>
+        )}
       </div>
     </div>
   );

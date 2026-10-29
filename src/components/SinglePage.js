@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getProductById } from '../productsStore/ProductService';
-import { useDispatch } from 'react-redux';
-import { cartActions } from '../redux-state/CartState';
 import { useToast } from '@chakra-ui/react';
 import { getAffiliateLinks } from '../utils/affiliateHelper';
 import {
   FaStar,
-  FaShoppingCart,
   FaBolt,
   FaTag,
   FaMapMarkerAlt,
@@ -24,7 +21,6 @@ import SPFooter from './SPFooter';
 const SinglePage = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const dispatch = useDispatch();
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -68,36 +64,19 @@ const SinglePage = () => {
     .filter(Boolean)
     .filter((img, idx, arr) => arr.indexOf(img) === idx);
 
-  const handleAddToCart = () => {
-    dispatch(
-      cartActions.addItemToCart({
-        id,
-        price: formattedPrice,
-        title: name,
-        image: primaryImage,
-      })
-    );
+  const targetAffiliateLink =
+    prodClicked.affiliateUrl ||
+    prodClicked.amazonUrl ||
+    prodClicked.flipkartUrl ||
+    (prodClicked.platform === 'flipkart' ? flipkartUrl : amazonUrl);
 
-    toast({
-      title: 'Added to Cart',
-      description: `${name} has been added to your Flipkart cart.`,
-      status: 'success',
-      duration: 1800,
-      isClosable: true,
-      position: 'bottom-right'
-    });
-  };
-
-  const handleBuyNow = () => {
-    dispatch(
-      cartActions.addItemToCart({
-        id,
-        price: formattedPrice,
-        title: name,
-        image: primaryImage,
-      })
-    );
-    navigate('/cart');
+  const handleBuyNow = (e) => {
+    if (e) e.preventDefault();
+    if (targetAffiliateLink) {
+      window.open(targetAffiliateLink, '_blank', 'noopener,noreferrer,sponsored');
+    } else {
+      navigate(`/deal/${id}`);
+    }
   };
 
   return (
@@ -154,22 +133,24 @@ const SinglePage = () => {
               </div>
             </div>
 
-            {/* Action Buttons: Add to Cart & Buy Now */}
+            {/* Action Buttons: View Deal & Direct Buy Now Redirect */}
             <div className="w-full grid grid-cols-2 gap-3 mt-6">
-              <button
-                onClick={handleAddToCart}
-                className="bg-[#ff9f00] hover:bg-[#f39700] text-white font-bold py-3 px-4 rounded-sm shadow-sm flex items-center justify-center gap-2 text-sm uppercase tracking-wider transition-colors"
+              <Link
+                to={`/deal/${id}`}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-sm shadow-sm flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-colors text-center"
               >
-                <FaShoppingCart className="text-base" />
-                Add to Cart
-              </button>
+                <FaBolt className="text-base text-amber-500" />
+                View Deal
+              </Link>
 
               <button
                 onClick={handleBuyNow}
-                className="bg-[#fb641b] hover:bg-[#e8560f] text-white font-bold py-3 px-4 rounded-sm shadow-sm flex items-center justify-center gap-2 text-sm uppercase tracking-wider transition-colors"
+                className={`font-bold py-3 px-4 rounded-sm shadow-sm flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-colors text-white ${
+                  prodClicked.platform === 'flipkart' ? 'bg-[#fb641b] hover:bg-[#e8560f]' : 'bg-[#FF9900] hover:bg-[#F08800] !text-gray-900'
+                }`}
               >
-                <FaBolt className="text-base" />
-                Buy Now
+                <FaExternalLinkAlt className="text-xs" />
+                {prodClicked.platform === 'flipkart' ? 'Buy on Flipkart' : 'Buy on Amazon'}
               </button>
             </div>
 
