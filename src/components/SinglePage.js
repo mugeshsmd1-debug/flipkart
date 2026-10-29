@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getProductById } from '../productsStore/ProductService';
 import { useToast } from '@chakra-ui/react';
@@ -24,12 +24,43 @@ const SinglePage = () => {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const prodClicked = getProductById(id);
+  const [prodClicked, setProdClicked] = useState(() => getProductById(id));
+  const [loading, setLoading] = useState(!prodClicked);
+  const [activeImg, setActiveImg] = useState(prodClicked?.primaryImage || '');
+  const [pincode, setPincode] = useState('110001');
+
+  useEffect(() => {
+    const checkProduct = () => {
+      const p = getProductById(id);
+      if (p) {
+        setProdClicked(p);
+        setActiveImg((prev) => prev || p.primaryImage);
+        setLoading(false);
+      }
+    };
+
+    checkProduct();
+    window.addEventListener('affiliate_products_changed', checkProduct);
+    const timeout = setTimeout(() => setLoading(false), 2000);
+
+    return () => {
+      window.removeEventListener('affiliate_products_changed', checkProduct);
+      clearTimeout(timeout);
+    };
+  }, [id]);
 
   const { amazonUrl, flipkartUrl } = getAffiliateLinks(prodClicked, searchParams);
 
-  const [activeImg, setActiveImg] = useState(prodClicked?.primaryImage || '');
-  const [pincode, setPincode] = useState('110001');
+  if (loading && !prodClicked) {
+    return (
+      <div className="bg-[#f1f3f6] min-h-screen py-24 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#2874f0] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sm font-semibold text-gray-600">Loading product details...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!prodClicked) {
     return (

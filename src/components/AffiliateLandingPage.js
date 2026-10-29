@@ -23,13 +23,34 @@ const AffiliateLandingPage = () => {
   const [searchParams] = useSearchParams();
 
   // Find product by id from dynamic store
-  const product = getProductById(id);
+  const [product, setProduct] = useState(() => getProductById(id));
+  const [loading, setLoading] = useState(!product);
 
   const [activeImage, setActiveImage] = useState(product?.primaryImage || '');
   const [copied, setCopied] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [customAmzTag, setCustomAmzTag] = useState(searchParams.get('tag') || 'dealfinder-21');
   const [customFkId, setCustomFkId] = useState(searchParams.get('affid') || 'dealfinder');
+
+  useEffect(() => {
+    const checkProduct = () => {
+      const p = getProductById(id);
+      if (p) {
+        setProduct(p);
+        setActiveImage((prev) => prev || p.primaryImage);
+        setLoading(false);
+      }
+    };
+
+    checkProduct();
+    window.addEventListener('affiliate_products_changed', checkProduct);
+    const timeout = setTimeout(() => setLoading(false), 2000);
+
+    return () => {
+      window.removeEventListener('affiliate_products_changed', checkProduct);
+      clearTimeout(timeout);
+    };
+  }, [id]);
 
   // Countdown timer for urgency
   const [timeLeft, setTimeLeft] = useState({
@@ -49,6 +70,17 @@ const AffiliateLandingPage = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  if (loading && !product) {
+    return (
+      <div className="bg-[#f1f3f6] min-h-screen py-24 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#2874f0] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sm font-semibold text-gray-600">Loading verified deal...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { getProducts } from '../productsStore/ProductService';
 import OurBestSellers from './OurBestSellers';
@@ -9,16 +9,25 @@ const FlipkartProductList = ({
   pageTitle = "Products Store",
   defaultFilterFn = (item) => item.type && item.type !== 'iGPosts'
 }) => {
+  const [productsList, setProductsList] = useState(getProducts());
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSort, setSelectedSort] = useState('relevance');
   const [maxPrice, setMaxPrice] = useState(2500);
   const [minRating, setMinRating] = useState(0);
   const [assuredOnly, setAssuredOnly] = useState(false);
 
+  useEffect(() => {
+    const handleUpdate = () => {
+      setProductsList(getProducts());
+    };
+    window.addEventListener('affiliate_products_changed', handleUpdate);
+    return () => window.removeEventListener('affiliate_products_changed', handleUpdate);
+  }, []);
+
   // Filter base items
   const baseItems = useMemo(() => {
-    return getProducts().filter(defaultFilterFn);
-  }, [defaultFilterFn]);
+    return productsList.filter(defaultFilterFn);
+  }, [productsList, defaultFilterFn]);
 
   // Apply active filters
   const filteredItems = useMemo(() => {

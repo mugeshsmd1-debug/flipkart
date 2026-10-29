@@ -4,13 +4,14 @@ import { isAdminLoggedIn } from '../utils/adminAuth';
 import OurBestSellers from './OurBestSellers';
 import AddProductModal from './AddProductModal';
 import AdminLoginModal from './AdminLoginModal';
-import { FaPlus, FaTrash, FaBoxOpen, FaBolt, FaLock, FaUnlock, FaShieldAlt } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaBoxOpen, FaBolt, FaLock, FaUnlock, FaShieldAlt } from 'react-icons/fa';
 import { useToast } from '@chakra-ui/react';
 
 const Products = () => {
   const [products, setProducts] = useState(getProducts());
   const [isAdmin, setIsAdmin] = useState(isAdminLoggedIn());
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const toast = useToast();
 
@@ -111,7 +112,10 @@ const Products = () => {
               )}
 
               <button
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={() => {
+                  setEditingProduct(null);
+                  setIsAddModalOpen(true);
+                }}
                 className="bg-[#2874f0] hover:bg-blue-600 text-white text-xs md:text-sm font-bold px-4 py-2 rounded shadow-sm flex items-center gap-1.5 transition-colors uppercase tracking-wider"
               >
                 <FaPlus /> Add Affiliate Product
@@ -133,10 +137,13 @@ const Products = () => {
               <>
                 <h3 className="text-xl font-bold text-gray-900">Your Store is Ready!</h3>
                 <p className="text-sm text-gray-500 max-w-md mt-2 leading-relaxed">
-                  You are in <strong>Admin Mode</strong>. Only you can add products to this website. Click below to add your first Amazon or Flipkart affiliate product.
+                  You are in <strong>Admin Mode</strong>. Only you can add or edit products. Click below to add your first Amazon or Flipkart affiliate product.
                 </p>
                 <button
-                  onClick={() => setIsAddModalOpen(true)}
+                  onClick={() => {
+                    setEditingProduct(null);
+                    setIsAddModalOpen(true);
+                  }}
                   className="mt-6 bg-[#fb641b] hover:bg-[#e8560f] text-white font-bold text-sm px-8 py-3 rounded shadow-md flex items-center gap-2 uppercase tracking-wider transition-transform hover:scale-105"
                 >
                   <FaPlus /> Add Your First Product
@@ -164,15 +171,27 @@ const Products = () => {
                   affiliateUrl={item.affiliateUrl || item.amazonUrl || item.flipkartUrl}
                   platform={item.platform}
                 />
-                {/* Trash icon ONLY visible to Admin */}
+                {/* Edit & Trash controls ONLY visible to Admin */}
                 {isAdmin && (
-                  <button
-                    onClick={() => handleDeleteOne(item.id, item.name)}
-                    className="absolute top-2 left-2 z-20 bg-red-600 text-white text-[10px] p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-red-700 transition-opacity shadow"
-                    title="Delete product"
-                  >
-                    <FaTrash />
-                  </button>
+                  <div className="absolute top-2 left-2 z-20 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => {
+                        setEditingProduct(item);
+                        setIsAddModalOpen(true);
+                      }}
+                      className="bg-[#2874f0] text-white text-[11px] p-1.5 rounded hover:bg-blue-600 shadow transition-colors"
+                      title="Edit product"
+                    >
+                      <FaEdit />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteOne(item.id, item.name)}
+                      className="bg-red-600 text-white text-[11px] p-1.5 rounded hover:bg-red-700 shadow transition-colors"
+                      title="Delete product"
+                    >
+                      <FaTrash />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
@@ -180,13 +199,18 @@ const Products = () => {
         )}
       </div>
 
-      {/* Add Product Modal (Admin only) */}
+      {/* Add / Edit Product Modal (Admin only) */}
       {isAdmin && (
         <AddProductModal
           isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
+          productToEdit={editingProduct}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            setEditingProduct(null);
+          }}
           onProductAdded={() => {
             setProducts(getProducts());
+            setEditingProduct(null);
           }}
         />
       )}

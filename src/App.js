@@ -1,4 +1,5 @@
 import './App.css';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import NavBar from './components/NavBar';
 import MobileNav from './components/MobileNav';
@@ -14,8 +15,21 @@ import Under10 from './components/Under10';
 import ForHer from './components/ForHer';
 import ForHim from './components/ForHim';
 import AffiliateLandingPage from './components/AffiliateLandingPage';
+import { fetchProductsFromCloud } from './productsStore/ProductService';
 
 function App() {
+  useEffect(() => {
+    // Sync with Supabase cloud on initial load
+    fetchProductsFromCloud();
+
+    // Re-sync when user returns to the tab
+    const handleFocus = () => {
+      fetchProductsFromCloud();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
   return (
     <div className="App bg-[#f1f3f6] min-h-screen text-[#212121]">
       <BrowserRouter>

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { addProduct } from '../productsStore/ProductService';
+import React, { useState, useEffect } from 'react';
+import { addProduct, updateProduct } from '../productsStore/ProductService';
 import { useToast } from '@chakra-ui/react';
-import { FaPlus, FaTimes, FaAmazon, FaShoppingBag } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaAmazon, FaShoppingBag, FaEdit } from 'react-icons/fa';
 
-const AddProductModal = ({ isOpen, onClose, onProductAdded }) => {
+const AddProductModal = ({ isOpen, onClose, onProductAdded, productToEdit = null }) => {
   const toast = useToast();
   const [platform, setPlatform] = useState('amazon'); // 'amazon' | 'flipkart'
   const [formData, setFormData] = useState({
@@ -15,6 +15,32 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded }) => {
     affiliateUrl: '',
     description: ''
   });
+
+  useEffect(() => {
+    if (productToEdit) {
+      setPlatform(productToEdit.platform || 'amazon');
+      setFormData({
+        name: productToEdit.name || '',
+        price: productToEdit.price || '',
+        originalPrice: productToEdit.originalPrice || '',
+        category: productToEdit.category || 'Electronics',
+        primaryImage: productToEdit.primaryImage || '',
+        affiliateUrl: productToEdit.affiliateUrl || productToEdit.amazonUrl || productToEdit.flipkartUrl || '',
+        description: productToEdit.description || ''
+      });
+    } else {
+      setPlatform('amazon');
+      setFormData({
+        name: '',
+        price: '',
+        originalPrice: '',
+        category: 'Electronics',
+        primaryImage: '',
+        affiliateUrl: '',
+        description: ''
+      });
+    }
+  }, [productToEdit, isOpen]);
 
   if (!isOpen) return null;
 
@@ -55,23 +81,43 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded }) => {
     const dealPrice = Number(formData.price) || 0;
     const mrp = formData.originalPrice ? Number(formData.originalPrice) : Math.round(dealPrice * 1.35);
 
-    const saved = addProduct({
-      ...formData,
-      platform,
-      price: dealPrice,
-      originalPrice: mrp,
-      primaryImage: formData.primaryImage.trim() || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=600&auto=format&fit=crop',
-      hoverImg: null
-    });
+    let saved;
+    if (productToEdit) {
+      saved = updateProduct(productToEdit.id, {
+        ...formData,
+        platform,
+        price: dealPrice,
+        originalPrice: mrp,
+        primaryImage: formData.primaryImage.trim() || productToEdit.primaryImage,
+      });
 
-    toast({
-      title: 'Affiliate Deal Created!',
-      description: `Landing page generated at /deal/${saved.id}`,
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-      position: 'top'
-    });
+      toast({
+        title: 'Product Updated!',
+        description: 'Changes are now live for all users worldwide.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+        position: 'top'
+      });
+    } else {
+      saved = addProduct({
+        ...formData,
+        platform,
+        price: dealPrice,
+        originalPrice: mrp,
+        primaryImage: formData.primaryImage.trim() || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=600&auto=format&fit=crop',
+        hoverImg: null
+      });
+
+      toast({
+        title: 'Affiliate Deal Created!',
+        description: `Live for all users at /deal/${saved.id}`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+        position: 'top'
+      });
+    }
 
     if (onProductAdded) onProductAdded(saved);
     onClose();
@@ -82,8 +128,10 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded }) => {
       <div className="bg-white rounded-lg shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-gray-200">
         <div className="bg-[#2874f0] text-white p-4 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-2">
-            <FaPlus className="text-yellow-300" />
-            <h2 className="font-bold text-base md:text-lg">Add New Affiliate Product</h2>
+            {productToEdit ? <FaEdit className="text-yellow-300" /> : <FaPlus className="text-yellow-300" />}
+            <h2 className="font-bold text-base md:text-lg">
+              {productToEdit ? 'Edit Affiliate Product' : 'Add New Affiliate Product'}
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -109,7 +157,7 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded }) => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-bold text-gray-700 mb-1">
                 Deal Price (₹) *
@@ -117,82 +165,94 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded }) => {
               <input
                 type="number"
                 required
+                min="0"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                placeholder="e.g. 19990"
+                placeholder="e.g. 24990"
                 className="w-full border border-gray-300 rounded px-3 py-2 text-gray-800 outline-none focus:border-[#2874f0]"
               />
             </div>
-
             <div>
               <label className="block font-bold text-gray-700 mb-1">
                 Original MRP (₹)
               </label>
               <input
                 type="number"
+                min="0"
                 value={formData.originalPrice}
                 onChange={(e) => setFormData({ ...formData, originalPrice: e.target.value })}
-                placeholder="e.g. 29990"
+                placeholder="Optional (defaults to +35%)"
                 className="w-full border border-gray-300 rounded px-3 py-2 text-gray-800 outline-none focus:border-[#2874f0]"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block font-bold text-gray-700 mb-1">
-              Product Image URL
-            </label>
-            <input
-              type="url"
-              value={formData.primaryImage}
-              onChange={(e) => setFormData({ ...formData, primaryImage: e.target.value })}
-              placeholder="https://m.media-amazon.com/images/I/..."
-              className="w-full border border-gray-300 rounded px-3 py-2 text-gray-800 outline-none focus:border-[#2874f0]"
-            />
-            <p className="text-[11px] text-gray-400 mt-1">
-              Right click any image on Amazon or Flipkart and select "Copy image address".
-            </p>
-          </div>
-
-          {/* Single Affiliate Store Selection */}
-          <div className="pt-2">
-            <label className="block font-bold text-gray-700 mb-2">
-              Select Affiliate Store *
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setPlatform('amazon')}
-                className={`py-2.5 px-4 rounded border flex items-center justify-center gap-2 font-bold text-xs transition-all ${
-                  platform === 'amazon'
-                    ? 'border-[#FF9900] bg-amber-50 text-[#172337] shadow-sm ring-2 ring-amber-300'
-                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                }`}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-gray-700 mb-1">
+                Category
+              </label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-gray-800 outline-none focus:border-[#2874f0] bg-white"
               >
-                <FaAmazon className={platform === 'amazon' ? 'text-[#FF9900] text-base' : 'text-gray-400'} />
-                Amazon Link
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPlatform('flipkart')}
-                className={`py-2.5 px-4 rounded border flex items-center justify-center gap-2 font-bold text-xs transition-all ${
-                  platform === 'flipkart'
-                    ? 'border-[#2874f0] bg-blue-50 text-[#2874f0] shadow-sm ring-2 ring-blue-300'
-                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                }`}
-              >
-                <FaShoppingBag className={platform === 'flipkart' ? 'text-[#2874f0] text-sm' : 'text-gray-400'} />
-                Flipkart Link
-              </button>
+                <option value="Electronics">Electronics & Gadgets</option>
+                <option value="Mobiles">Mobiles & Tablets</option>
+                <option value="Fashion">Fashion & Apparel</option>
+                <option value="Home">Home & Kitchen</option>
+                <option value="Appliances">Appliances</option>
+                <option value="Beauty">Beauty & Personal Care</option>
+                <option value="Deals">Lightning Deals</option>
+              </select>
+            </div>
+            <div>
+              <label className="block font-bold text-gray-700 mb-1">
+                Product Image URL
+              </label>
+              <input
+                type="url"
+                value={formData.primaryImage}
+                onChange={(e) => setFormData({ ...formData, primaryImage: e.target.value })}
+                placeholder="https://..."
+                className="w-full border border-gray-300 rounded px-3 py-2 text-gray-800 outline-none focus:border-[#2874f0]"
+              />
             </div>
           </div>
 
-          {/* Single Affiliate Link Input */}
-          <div>
-            <label className="block font-bold text-gray-700 mb-1">
-              {platform === 'amazon' ? 'Amazon Affiliate Product Link *' : 'Flipkart Affiliate Product Link *'}
-            </label>
+          {/* Affiliate Store Selector & Link */}
+          <div className="p-3 bg-gray-50 border border-gray-200 rounded">
+            <div className="flex items-center justify-between mb-2">
+              <label className="font-bold text-gray-800 flex items-center gap-1.5">
+                <span>Affiliate Product Link *</span>
+              </label>
+              {/* Store Pill */}
+              <div className="flex items-center gap-1 bg-white border border-gray-300 rounded p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setPlatform('amazon')}
+                  className={`px-2 py-0.5 rounded font-bold flex items-center gap-1 transition-colors ${
+                    platform === 'amazon'
+                      ? 'bg-amber-400 text-black shadow-xs'
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  <FaAmazon /> Amazon
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlatform('flipkart')}
+                  className={`px-2 py-0.5 rounded font-bold flex items-center gap-1 transition-colors ${
+                    platform === 'flipkart'
+                      ? 'bg-[#2874f0] text-white shadow-xs'
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  <FaShoppingBag /> Flipkart
+                </button>
+              </div>
+            </div>
+
             <input
               type="url"
               required
@@ -239,7 +299,7 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded }) => {
               type="submit"
               className="px-6 py-2.5 rounded bg-[#fb641b] hover:bg-[#e8560f] text-white font-bold shadow-md transition-colors uppercase tracking-wider"
             >
-              Publish Affiliate Deal
+              {productToEdit ? 'Update Product' : 'Publish Affiliate Deal'}
             </button>
           </div>
         </form>
